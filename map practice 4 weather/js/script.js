@@ -1,5 +1,8 @@
 console.log("D3 version:", d3.version);
 
+const width = 975;
+const height = 610;
+
 // https://observablehq.com/@jeantimex/how-to-draw-a-us-map
 // https://observablehq.com/@d3/u-s-state-capitals 
 // trying to use some of the tutorials online, youtube videos, + some of the observable graph galleries
@@ -14,6 +17,7 @@ async function fetchData() {
 
   // turn that JSON file data (state) into a GeoJSON object using topojson library
   data = topojson.feature(states, states.objects.states).features;
+  console.log('logging data -- geoJSON object hopefully')
   console.log(data);
 
   // load from CSV file (the capitals)
@@ -24,44 +28,70 @@ async function fetchData() {
   const path = d3.geoPath(); // path generator that will convert GeoJSON to SVG paths
   const projection = d3.geoAlbersUsa().scale(1300).translate([487.5, 305]);
 
-  d3.select('svg')
+  const svg = d3.select('svg')
+    .on('click', reset);
+  
+  const g = svg.append('g');
+
+  const states_g = g
     .append('g')
+    .attr("cursor", "pointer")
     .selectAll('path')
     .data(data)
     .enter()
     .append('path')
-    .attr('d', path)
+    .attr('d', path) // drawing the state borders on the map
     .attr('fill', 'lightgrey')
     .attr('stroke', 'black')
-    .attr('stroke-width', 0.5);  // this is the border of the states on the map 
+    .attr('stroke-width', 0.5)  // this is the border of the states on the map 
+    .on("click", clicked); // when a state is clicked, call the clicked function 
 
   // filter out invalid data points
   const validWeather = weather.filter(d => projection([d.longitude, d.latitude]));
   console.log('Number of valid weather points', validWeather.length);
 
-  // reduce the number of data points for performance
-  const reducedWeather = validWeather.slice(0, 40000); // adjust the number as needed
-  console.log('Number of weather points shown (reduced for performance', reducedWeather.length);
+  validWeather.forEach(d => {
+    d.date = d.date.toString(); 
+    d.year = +d.date.substring(0, 4);
+    d.month = +d.date.substring(4, 6);
+    d.day = +d.date.substring(6, 8);
+    d.formattedDate = `${d.year}-${d.month.toString().padStart(2, '0')}-${d.day.toString().padStart(2, '0')}`;
+  });
 
+  let uniqueDates = [...new Set(validWeather.map(d => d.formattedDate))].sort();
+  let minDateIndex = 0;
+  let maxDateIndex = uniqueDates.length - 1;
 
-  // add the data points to the map using requestAnimationFrame for smoother rendering
-  // honestly don't really know what RequestAnimationsFrame does but w/e
-  function renderPoints() {
-    d3.select('g')
-      .selectAll('circle')
-      .data(reducedWeather)
-      .enter()
+  d3.select('#daySlider').attr('min', minDateIndex).attr('max', maxDateIndex).attr('value', minDateIndex);
+  d3.select('#dayDisplay').text(uniqueDates[minDateIndex]);
+
+  function updatePoints(dateIndex) {
+    let selectedDate = uniqueDates[dateIndex];
+    const filteredWeather = validWeather.filter(d => d.formattedDate === selectedDate);
+    console.log(`Displaying data for date: ${selectedDate}, points: ${filteredWeather.length}`);
+
+    const circles = d3.select('g').selectAll('circle').data(filteredWeather, d => d.id);
+
+    circles.enter()
       .append('circle')
-      .attr('cx', d => projection([d.longitude, d.latitude])[0])
-      .attr('cy', d => projection([d.longitude, d.latitude])[1])
+      .attr('cx', d => projection([+d.longitude, +d.latitude])[0])
+      .attr('cy', d => projection([+d.longitude, +d.latitude])[1])
       .attr('r', 3)
-      .attr('fill', 'red');
+      .attr('fill', 'red')
+      .merge(circles)
+      .transition()
+      .duration(300);
+
+    circles.exit().remove();
+    d3.select('#dayDisplay').text(selectedDate);
   }
 
-  requestAnimationFrame(renderPoints);
+  d3.select('#daySlider').on('input', function () {
+    updatePoints(+this.value);
+  });
 
-  //THINGS TO DO
-  // CHANGE ZOOM TO BOX ZOOM USING STATE PROJECTIONS
+  updatePoints(minDateIndex);
+
   // AND THAT WILL UPDATE SIZE OF DOTS
 
   // CHANGE DOTS INTO ARROWS
@@ -74,17 +104,47 @@ async function fetchData() {
   // SO WE DONT HAVE TO SHOW 400K DATA POINTS AT ONCE
   // WE CAN SHOW THEM OVER TIME
   // SO WE CAN HAVE A SLIDER TO CHANGE THE TIME
-  
-  // add zoom
-  let zoom = d3.zoom()
-    .on('zoom', handleZoom);
+
+  // resets a state back to it's normal color and zooms out
+
+  // https://observablehq.com/@d3/zoom-to-bounding-box
+  function reset() {
+    console.log('resetting')
+    states_g.transition().style("fill", null);
+    svg.transition().duration(750).call(
+      zoom.transform,
+      d3.zoomIdentity,
+      d3.zoomTransform(svg.node()).invert([width / 2, height / 2])
+    );
+  }
+
+  // add an event handler that gets called when a state is clicked (turns the state red, zooms in
+  function clicked(event, d) {
+    const [[x0, y0], [x1, y1]] = path.bounds(d);
+    event.stopPropagation();
+    states_g.transition().style("fill", null);
+    d3.select(this).transition().style("fill", "yellow");
+    svg.transition().duration(750).call(
+      zoom.transform,
+      d3.zoomIdentity
+        .translate(width / 2, height / 2)
+        .scale(Math.min(8, 0.9 / Math.max((x1 - x0) / width, (y1 - y0) / height)))
+        .translate(-(x0 + x1) / 2, -(y0 + y1) / 2),
+      d3.pointer(event, svg.node())
+    );
+  }
 
   // add an event handler that gets called when a zoom or pan event occurs.
   // The event handler receives a transform which can be applied to chart elements
-  function handleZoom(e) {
+  function zoomed(event) {
     d3.select('g')
-      .attr('transform', e.transform);
-  }
+      .attr('transform', event.transform)
+      .attr('stroke-width', 1 / event.transform.k);
+    }
+
+  let zoom = d3.zoom()
+    .scaleExtent([1, 8])
+    .on('zoom', zoomed);
 
   d3.select('svg')
     .call(zoom);
