@@ -50,6 +50,17 @@ async function fetchData() {
   const validWeather = weather.filter(d => projection([d.longitude, d.latitude]));
   console.log('Number of valid weather points', validWeather.length);
 
+  // reduce the number of data points for performance
+  const reducedWeather = validWeather.slice(0, 40000); // adjust the number as needed
+  console.log('Number of weather points shown (reduced for performance', reducedWeather.length);
+
+  // add the data points to the map using requestAnimationFrame for smoother rendering
+  // honestly don't really know what RequestAnimationsFrame does but w/e
+  function renderPoints() {
+    d3.select('g')
+      .selectAll('circle')
+      .data(reducedWeather)
+      .enter()
   validWeather.forEach(d => {
     d.date = d.date.toString(); 
     d.year = +d.date.substring(0, 4);
@@ -141,6 +152,13 @@ async function fetchData() {
       .attr('transform', event.transform)
       .attr('stroke-width', 1 / event.transform.k);
     }
+      .attr('transform', event.transform)
+      .attr('stroke-width', 1 / event.transform.k);
+    }
+
+  let zoom = d3.zoom()
+    .scaleExtent([1, 8])
+    .on('zoom', zoomed);
 
   let zoom = d3.zoom()
     .scaleExtent([1, 8])
