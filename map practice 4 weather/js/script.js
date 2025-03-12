@@ -126,6 +126,60 @@ async function fetchData() {
     let selectedDate = uniqueDates[dateIndex];
     const filteredWeather = validWeather.filter(d => d.formattedDate === selectedDate);
     console.log(`Displaying data for date: ${selectedDate}, points: ${filteredWeather.length}, currVar: ${currVar}`);
+    console.log(`Displaying data for date: ${selectedDate}, points: ${filteredWeather.length}, currVar: ${currVar}`);
+
+    d3.select('g')
+      .selectAll('circle')
+      .data(filteredWeather)
+      .join(
+        function(enter){
+          return enter.append('circle')
+          .attr('cx', d => projection([+d.longitude, +d.latitude])[0])
+          .attr('cy', d => projection([+d.longitude, +d.latitude])[1])
+          .attr('r', 2)
+          .attr('fill', 'red')
+          .on('mouseover', function (event, d) {
+            console.log(d) // See the data point in the console for debugging
+            d3.select('#tooltip')
+                // if you change opacity to hide it, you should also change opacity here
+                .style("display", 'block') // Make the tooltip visible
+                .html( // Change the html content of the <div> directly
+                `<strong>${d.station}</strong><br/>
+                state: ${d.state} <br/>
+                date: ${d.date}`)
+                .style("left", (event.pageX + 20) + "px")
+                .style("top", (event.pageY - 28) + "px");
+
+            d3.select(this) // Refers to the hovered circle
+                .style('stroke', 'black')
+                .style('stroke-width', '1px')
+          })
+          .on("mouseout", function (event, d) {
+              d3.select('#tooltip')
+                .style('display', 'none') // Hide tooltip when cursor leaves
+              
+              d3.select(this) // Refers to the hovered circle
+                  .style('stroke-width', '0px')
+          })
+        },
+        function(update){
+          return update
+            .attr('fill', d => {
+              if (currVar == 'TMIN') {
+                console.log('tmin color', d.TMIN/100)
+                return d3.interpolateReds(d.TMIN/100)
+              } else if (currVar == 'TMAX') {
+                console.log('tmax color', d.TMIN/100)
+                return d3.interpolateBlues(d.TMAX/100)
+              } else if (currVar == 'TAVG') {
+                return d3.interpolateGreens(d.TAVG/100)
+              }
+            }) // color based on the data
+        }, 
+        function(exit){
+          return exit.remove();
+        }
+      )
 
     d3.select('g')
       .selectAll('circle')
