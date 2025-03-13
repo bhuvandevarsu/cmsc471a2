@@ -10,7 +10,6 @@ let active = d3.select(null);
 // https://observablehq.com/@jeantimex/how-to-draw-a-us-map
 // https://observablehq.com/@d3/u-s-state-capitals
 // trying to use some of the tutorials online, youtube videos, + some of the observable graph galleries
-// (altho those are a little harder to use bc of the obsserable notebook does things a bit differnently)
 
 async function fetchData() {
 
@@ -77,11 +76,12 @@ async function fetchData() {
   data = topojson.feature(us, us.objects.states).features;
   data_counties = topojson.feature(us, us.objects.counties).features;
   
-  console.log('logging data -- geoJSON object hopefully')
+  console.log('logging data -- geoJSON object of the states')
   console.log(data);
 
   // load from CSV file (the capitals)
   const weather = await d3.csv('data/weather.csv');
+  console.log('logging weather data')  
   console.log(weather);
 
   // https://d3js.org/d3-geo/path
@@ -125,9 +125,9 @@ async function fetchData() {
     .attr("id", "state-borders")
     .attr("d", path);
   
-  // filter out invalid data points
+  // filter out invalid data points (no null values for projection from lat/long)
   const validWeather = weather.filter(d => projection([d.longitude, d.latitude]));
-  console.log('Number of valid weather points', validWeather.length);
+  console.log('Number of valid weather points for total data set', validWeather.length);
 
   validWeather.forEach(d => {
     d.date = d.date.toString();
@@ -141,6 +141,7 @@ async function fetchData() {
   let minDateIndex = 0;
   let maxDateIndex = uniqueDates.length - 1;
 
+  // getting max and min date index, updating slider to match
   d3.select('#daySlider').attr('min', minDateIndex).attr('max', maxDateIndex).attr('value', minDateIndex);
   d3.select('#dayDisplay').text(uniqueDates[minDateIndex]);
 
@@ -148,8 +149,7 @@ async function fetchData() {
     let selectedDate = uniqueDates[dateIndex];
     const filteredWeather = validWeather.filter(d => d.formattedDate === selectedDate);
     console.log(`Displaying data for date: ${selectedDate}, points: ${filteredWeather.length}, currVar: ${currVar}`);
-    console.log(`Displaying data for date: ${selectedDate}, points: ${filteredWeather.length}, currVar: ${currVar}`);
-
+    
     d3.select('g')
       .selectAll('circle')
       .data(filteredWeather)
@@ -162,6 +162,7 @@ async function fetchData() {
           .attr('fill', 'red')
           .on('mouseover', function (event, d) {
             console.log(d) // See the data point in the console for debugging
+            console.log(projection([d.longitude, d.latitude])) // See the projected point in the console for debugging
             d3.select('#tooltip')
                 // if you change opacity to hide it, you should also change opacity here
                 .style("display", 'block') // Make the tooltip visible
@@ -186,65 +187,12 @@ async function fetchData() {
         },
         function(update){
           return update
+            .attr('cx', d => projection([+d.longitude, +d.latitude])[0])
+            .attr('cy', d => projection([+d.longitude, +d.latitude])[1])  
             .attr('fill', d => {
               if (currVar == 'TMIN') {
-                console.log('tmin color', d.TMIN/100)
                 return d3.interpolateReds(d.TMIN/100)
               } else if (currVar == 'TMAX') {
-                console.log('tmax color', d.TMIN/100)
-                return d3.interpolateBlues(d.TMAX/100)
-              } else if (currVar == 'TAVG') {
-                return d3.interpolateGreens(d.TAVG/100)
-              }
-            }) // color based on the data
-        }, 
-        function(exit){
-          return exit.remove();
-        }
-      )
-
-    d3.select('g')
-      .selectAll('circle')
-      .data(filteredWeather)
-      .join(
-        function(enter){
-          return enter.append('circle')
-          .attr('cx', d => projection([+d.longitude, +d.latitude])[0])
-          .attr('cy', d => projection([+d.longitude, +d.latitude])[1])
-          .attr('r', 2)
-          .attr('fill', 'red')
-          .on('mouseover', function (event, d) {
-            console.log(d) // See the data point in the console for debugging
-            d3.select('#tooltip')
-                // if you change opacity to hide it, you should also change opacity here
-                .style("display", 'block') // Make the tooltip visible
-                .html( // Change the html content of the <div> directly
-                `<strong>${d.station}</strong><br/>
-                state: ${d.state} <br/>
-                date: ${d.date}`)
-                .style("left", (event.pageX + 20) + "px")
-                .style("top", (event.pageY - 28) + "px");
-
-            d3.select(this) // Refers to the hovered circle
-                .style('stroke', 'black')
-                .style('stroke-width', '1px')
-          })
-          .on("mouseout", function (event, d) {
-              d3.select('#tooltip')
-                .style('display', 'none') // Hide tooltip when cursor leaves
-              
-              d3.select(this) // Refers to the hovered circle
-                  .style('stroke-width', '0px')
-          })
-        },
-        function(update){
-          return update
-            .attr('fill', d => {
-              if (currVar == 'TMIN') {
-                console.log('tmin color', d.TMIN/100)
-                return d3.interpolateReds(d.TMIN/100)
-              } else if (currVar == 'TMAX') {
-                console.log('tmax color', d.TMIN/100)
                 return d3.interpolateBlues(d.TMAX/100)
               } else if (currVar == 'TAVG') {
                 return d3.interpolateGreens(d.TAVG/100)
@@ -267,49 +215,75 @@ async function fetchData() {
   updatePoints(minDateIndex);
 
   function updateStateColors(selectedDate) {
-    // Filter the weather data for the selected date
-    const filteredWeather = validWeather.filter(d => d.formattedDate === selectedDate);
+    // Get the index of the selected date
+    const selectedIndex = uniqueDates.indexOf(selectedDate);
+  
+    // Calculate the start and end indices for the 5-day window
+    const startIndex = Math.max(0, selectedIndex - 2);
+    const endIndex = Math.min(uniqueDates.length - 1, selectedIndex + 2);
+  
+    // Get the dates within the 5-day window
+    const dateWindow = uniqueDates.slice(startIndex, endIndex + 1);
+  
+    // Filter the weather data for the dates within the 5-day window
+    const filteredWeather = validWeather.filter(d => dateWindow.includes(d.formattedDate));
   
     // Use the mapping here: group data by full state name
     const stateAggregates = d3.rollup(
       filteredWeather,
       v => ({
         avgTemp: d3.mean(v, d => +d.TAVG),
-        avgWind: d3.mean(v, d => +d.AWND)
+        avgWind: d3.mean(v, d => +d.AWND),
+        avgPrecip: d3.mean(v, d => +d.PRCP),
+        avgSnow: d3.mean(v, d => +d.SNOW)
       }),
       d => stateAbbrevToName[d.state] // Convert abbreviation to full name
     );
   
     // Calculate extents
-    const temps = Array.from(stateAggregates.values(), d => d.avgTemp);
-    const winds = Array.from(stateAggregates.values(), d => d.avgWind);
-    const tempExtent = d3.extent(temps);
-    const windExtent = d3.extent(winds);
+    const tempExtent = d3.extent(Array.from(stateAggregates.values(), d => d.avgTemp));
+    const windExtent = d3.extent(Array.from(stateAggregates.values(), d => d.avgWind));
+    const precipExtent = d3.extent(Array.from(stateAggregates.values(), d => d.avgPrecip));
+    const snowExtent = d3.extent(Array.from(stateAggregates.values(), d => d.avgSnow));
   
     // Define color scales
     const tempColorScale = d3.scaleLinear()
         .domain(tempExtent)
         .range(["#ffcccc", "#990000"]); // light red to dark red
+    
     const windColorScale = d3.scaleLinear()
         .domain(windExtent)
         .range(["#cce5ff", "#003366"]); // light blue to dark blue
   
+    const precipColorScale = d3.scaleLinear()
+        .domain(precipExtent)
+        .range(["#ffffe0", "#ffd700"]); // light yellow to dark yellow
+    
+    const snowColorScale = d3.scaleLinear()
+        .domain(snowExtent)
+        .range(["#e6ffe6", "#006600"]); // light green to dark green
+  
     // Check which gradient is active
     const tempChecked = d3.select("#tempGradient").property("checked");
     const windChecked = d3.select("#windGradient").property("checked");
+    const precipChecked = d3.select("#precipGradient").property("checked");
+    const snowChecked = d3.select("#snowGradient").property("checked");
   
     // Update the fill for each state
     states_g.attr("fill", d => {
-        // d.properties.name is the full state name from the JSON
-        const agg = stateAggregates.get(d.properties.name);
-        if (!agg) return "lightgrey"; // No data for the state
-        if (tempChecked && !windChecked) {
-           return tempColorScale(agg.avgTemp);
-        } else if (windChecked && !tempChecked) {
-           return windColorScale(agg.avgWind);
-        } else {
-           return "lightgrey"; // Default color if neither or both are checked
-        }
+      const agg = stateAggregates.get(d.properties.name);
+      if (!agg) return "lightgrey"; // fallback if no data exists for a state
+      if (tempChecked) {
+         return tempColorScale(agg.avgTemp);
+      } else if (windChecked) {
+         return windColorScale(agg.avgWind);
+      } else if (precipChecked) {
+         return precipColorScale(agg.avgPrecip);
+      } else if (snowChecked) {
+         return snowColorScale(agg.avgSnow);
+      } else {
+         return "lightgrey"; // default color if no box is selected
+      }
     });
   }
 
@@ -382,11 +356,35 @@ async function fetchData() {
     });
 
   d3.select("#tempGradient").on("change", function() { 
-    if (this.checked) { d3.select("#windGradient").property("checked", false); }
+    if (this.checked) { 
+      d3.select("#windGradient").property("checked", false);
+      d3.select("#precipGradient").property("checked", false);
+      d3.select("#snowGradient").property("checked", false); }
+    
     updateStateColors(d3.select('#dayDisplay').text()); });
-  
-  d3.select("#windGradient").on("change", function() { if (this.checked) { 
-    d3.select("#tempGradient").property("checked", false); }
+    
+  d3.select("#windGradient").on("change", function() { 
+    if (this.checked) { 
+      d3.select("#tempGradient").property("checked", false);
+      d3.select("#precipGradient").property("checked", false);
+      d3.select("#snowGradient").property("checked", false); }
+      
+    updateStateColors(d3.select('#dayDisplay').text()); });
+    
+  d3.select("#precipGradient").on("change", function() { 
+    if (this.checked) { 
+      d3.select("#tempGradient").property("checked", false);
+      d3.select("#windGradient").property("checked", false);
+      d3.select("#snowGradient").property("checked", false); } 
+      
+    updateStateColors(d3.select('#dayDisplay').text()); });
+    
+  d3.select("#snowGradient").on("change", function() { 
+    if (this.checked) { 
+      d3.select("#tempGradient").property("checked", false);
+      d3.select("#windGradient").property("checked", false);
+      d3.select("#precipGradient").property("checked", false); } 
+      
     updateStateColors(d3.select('#dayDisplay').text()); });
 }
 

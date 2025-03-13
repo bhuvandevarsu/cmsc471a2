@@ -70,7 +70,7 @@ ul li {
 }
 
 .county-boundary {
-    fill: none;
+    fill: lightgrey;
     stroke: black;
     stroke-width: .15px;
 }
