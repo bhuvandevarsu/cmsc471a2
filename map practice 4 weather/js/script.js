@@ -10,6 +10,7 @@ let active = d3.select(null);
 // https://observablehq.com/@jeantimex/how-to-draw-a-us-map
 // https://observablehq.com/@d3/u-s-state-capitals
 // trying to use some of the tutorials online, youtube videos, + some of the observable graph galleries
+// (altho those are a little harder to use bc of the obsserable notebook does things a bit differnently)
 
 async function fetchData() {
 
@@ -76,12 +77,12 @@ async function fetchData() {
   data = topojson.feature(us, us.objects.states).features;
   data_counties = topojson.feature(us, us.objects.counties).features;
   
-  console.log('logging data -- geoJSON object of the states')
+  console.log('logging data -- geoJSON object hopefully')
   console.log(data);
 
   // load from CSV file (the capitals)
   const weather = await d3.csv('data/weather.csv');
-  console.log('logging weather data')  
+  console.log('logging weather data')
   console.log(weather);
 
   // https://d3js.org/d3-geo/path
@@ -125,9 +126,9 @@ async function fetchData() {
     .attr("id", "state-borders")
     .attr("d", path);
   
-  // filter out invalid data points (no null values for projection from lat/long)
+  // filter out invalid data points
   const validWeather = weather.filter(d => projection([d.longitude, d.latitude]));
-  console.log('Number of valid weather points for total data set', validWeather.length);
+  console.log('Number of valid weather points for entire data set', validWeather.length);
 
   validWeather.forEach(d => {
     d.date = d.date.toString();
@@ -141,7 +142,6 @@ async function fetchData() {
   let minDateIndex = 0;
   let maxDateIndex = uniqueDates.length - 1;
 
-  // getting max and min date index, updating slider to match
   d3.select('#daySlider').attr('min', minDateIndex).attr('max', maxDateIndex).attr('value', minDateIndex);
   d3.select('#dayDisplay').text(uniqueDates[minDateIndex]);
 
@@ -162,14 +162,17 @@ async function fetchData() {
           .attr('fill', 'red')
           .on('mouseover', function (event, d) {
             console.log(d) // See the data point in the console for debugging
-            console.log(projection([d.longitude, d.latitude])) // See the projected point in the console for debugging
             d3.select('#tooltip')
                 // if you change opacity to hide it, you should also change opacity here
                 .style("display", 'block') // Make the tooltip visible
                 .html( // Change the html content of the <div> directly
                 `<strong>${d.station}</strong><br/>
                 state: ${d.state} <br/>
-                date: ${d.date}`)
+                date: ${d.date} <br/>
+                average temperature: ${d.TAVG} <br/>
+                average wind speed: ${d.AWND} <br/>
+                average precipitation: ${d.PRCP} <br/>
+                average snowfall: ${d.SNOW} <br/>`)
                 .style("left", (event.pageX + 20) + "px")
                 .style("top", (event.pageY - 28) + "px");
 
@@ -191,7 +194,7 @@ async function fetchData() {
             .attr('cy', d => projection([+d.longitude, +d.latitude])[1])  
             .attr('fill', d => {
               if (currVar == 'TMIN') {
-                return d3.interpolateReds(d.TMIN/100)
+                 return d3.interpolateReds(d.TMIN/100)
               } else if (currVar == 'TMAX') {
                 return d3.interpolateBlues(d.TMAX/100)
               } else if (currVar == 'TAVG') {
@@ -217,7 +220,7 @@ async function fetchData() {
   function updateStateColors(selectedDate) {
     // Get the index of the selected date
     const selectedIndex = uniqueDates.indexOf(selectedDate);
-  
+
     // Calculate the start and end indices for the 5-day window
     const startIndex = Math.max(0, selectedIndex - 2);
     const endIndex = Math.min(uniqueDates.length - 1, selectedIndex + 2);
@@ -227,7 +230,7 @@ async function fetchData() {
   
     // Filter the weather data for the dates within the 5-day window
     const filteredWeather = validWeather.filter(d => dateWindow.includes(d.formattedDate));
-  
+    
     // Use the mapping here: group data by full state name
     const stateAggregates = d3.rollup(
       filteredWeather,
@@ -254,7 +257,7 @@ async function fetchData() {
     const windColorScale = d3.scaleLinear()
         .domain(windExtent)
         .range(["#cce5ff", "#003366"]); // light blue to dark blue
-  
+
     const precipColorScale = d3.scaleLinear()
         .domain(precipExtent)
         .range(["#ffffe0", "#ffd700"]); // light yellow to dark yellow
