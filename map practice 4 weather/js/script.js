@@ -5,6 +5,7 @@ const height = 610;
 
 const options = ['TMIN','TMAX','TAVG','AWND','WDF5','WSF5','SNOW','SNWD','PRCP'];
 let currVar = options[0]; // Declare currVar here
+let active = d3.select(null);
 
 // https://observablehq.com/@jeantimex/how-to-draw-a-us-map
 // https://observablehq.com/@d3/u-s-state-capitals
@@ -69,11 +70,13 @@ async function fetchData() {
 
   // load from JSON file (the states)
   // https://d3js.org/d3-geo/conic#geoAlbersUsa
-  const states = await d3.json('data/states-albers-10m.json');
-  console.log(states);
+  const us = await d3.json('data/counties-albers-10m.json');
+  console.log(us);
 
   // turn that JSON file data (state) into a GeoJSON object using topojson library
-  data = topojson.feature(states, states.objects.states).features;
+  data = topojson.feature(us, us.objects.states).features;
+  data_counties = topojson.feature(us, us.objects.counties).features;
+  
   console.log('logging data -- geoJSON object hopefully')
   console.log(data);
 
@@ -87,12 +90,25 @@ async function fetchData() {
 
   const svg = d3.select('svg')
     .on('click', reset);
-  
-  const g = svg.append('g');
+    
+  const g = svg.append('g')
+
+  // some code for zoom into counties map taken from
+  // https://gist.github.com/ElefHead/ebff082d41ef8b9658059c408096f782
+  const counties_g = g
+    .append("g")
+    .attr("id", "counties")
+    .selectAll("path")
+    .data(data_counties)
+    .enter().append("path")
+    .attr("d", path)
+    .attr("class", "county-boundary")
+    .on("click", reset);
 
   const states_g = g
     .append('g')
     .attr("cursor", "pointer")
+    .attr("id", "states")
     .selectAll('path')
     .data(data)
     .enter()
@@ -101,8 +117,14 @@ async function fetchData() {
     .attr('fill', 'lightgrey')
     .attr('stroke', 'black')
     .attr('stroke-width', 0.5)  // this is the border of the states on the map
+    .attr("class", "state")
     .on("click", clicked); // when a state is clicked, call the clicked function
 
+  g.append("path")
+    .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+    .attr("id", "state-borders")
+    .attr("d", path);
+  
   // filter out invalid data points
   const validWeather = weather.filter(d => projection([d.longitude, d.latitude]));
   console.log('Number of valid weather points', validWeather.length);
@@ -254,23 +276,11 @@ async function fetchData() {
     });
   }
 
-  // AND THAT WILL UPDATE SIZE OF DOTS
-
-  // CHANGE DOTS INTO ARROWS
-  // ALSO THERE IS A TIME ELEMENT
-  // SINCE WE HAVE 400K DATA POINTS, WE CAN USE THAT TO ANIMATE THE ARROWS
-  // SO THAT THEY MOVE IN A DIRECTION BASED ON THE WIND DIRECTION
-  // AND THE SPEED OF THE ARROW IS BASED ON THE WIND SPEED
-
-  // AND THE TIME
-  // SO WE DONT HAVE TO SHOW 400K DATA POINTS AT ONCE
-  // WE CAN SHOW THEM OVER TIME
-  // SO WE CAN HAVE A SLIDER TO CHANGE THE TIME
-
-  // resets a state back to it's normal color and zooms out
-
   // https://observablehq.com/@d3/zoom-to-bounding-box
   function reset() {
+    active.classed("active", false);
+    active = d3.select(null);
+    
     console.log('resetting')
     states_g.transition().style("fill", null);
     svg.transition().duration(750).call(
@@ -282,6 +292,12 @@ async function fetchData() {
 
   // add an event handler that gets called when a state is clicked (turns the state red, zooms in
   function clicked(event, d) {
+    
+    if (d3.select('.background').node() === this) return reset();
+    if (active.node() === this) return reset();
+    active.classed("active", false);
+    active = d3.select(this).classed("active", true);
+
     const [[x0, y0], [x1, y1]] = path.bounds(d);
     event.stopPropagation();
     states_g.transition().style("fill", null);
