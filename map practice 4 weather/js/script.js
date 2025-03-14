@@ -252,6 +252,7 @@ async function fetchData() {
 
   d3.select('#daySlider').on('input', function () {
     updatePoints(+this.value);
+    console.log(+this.value)
   });
 
   updatePoints(minDateIndex);
@@ -390,7 +391,8 @@ async function fetchData() {
       d3.select("#snowGradient").property("checked", false);
       d3.select("#depthGradient").property("checked", false); 
       currVar = 'TAVG';
-      updateStateColors(d3.select('#dayDisplay').text()); 
+      updateStateColors(d3.select('#dayDisplay').text());
+      updatePoints(+document.getElementById("daySlider").value) 
     }
   });
     
@@ -403,7 +405,8 @@ async function fetchData() {
       d3.select("#snowGradient").property("checked", false); 
       d3.select("#depthGradient").property("checked", false); 
       currVar = 'AWND';
-      updateStateColors(d3.select('#dayDisplay').text()); 
+      updateStateColors(d3.select('#dayDisplay').text());
+      updatePoints(+document.getElementById("daySlider").value); 
     }
   });
     
@@ -415,6 +418,7 @@ async function fetchData() {
       d3.select("#depthGradient").property("checked", false); 
       currVar = 'PRCP';
       updateStateColors(d3.select('#dayDisplay').text());
+      updatePoints(+document.getElementById("daySlider").value); 
     }
   });
     
@@ -426,6 +430,7 @@ async function fetchData() {
       d3.select("#depthGradient").property("checked", false); 
       currVar = 'SNOW';
       updateStateColors(d3.select('#dayDisplay').text());
+      updatePoints(+document.getElementById("daySlider").value); 
     } 
    });
 
@@ -437,6 +442,7 @@ async function fetchData() {
         d3.select('#snowGradient').property("checked",false);
         currVar = 'SNWD';
         updateStateColors(d3.select('#dayDisplay').text());
+        updatePoints(+document.getElementById("daySlider").value); 
       }
     });
 }
