@@ -85,6 +85,42 @@ async function fetchData() {
   console.log('logging weather data')
   console.log(weather);
 
+  const missingTavg = weather.filter(d => !d.TAVG || d.TAVG.trim() === "");
+  console.log("Number of data points missing TAVG:", missingTavg.length);
+  console.log("Percentage missing TAVG:", ((missingTavg.length / weather.length) * 100).toFixed(2) + "%");
+
+  const missingTmin = weather.filter(d => !d.TMIN || d.TMIN.trim() === "");
+  console.log("Number of data points missing TMIN:", missingTmin.length);
+  console.log("Percentage missing TMIN:", ((missingTmin.length / weather.length) * 100).toFixed(2) + "%");
+
+  const missingTmax = weather.filter(d => !d.TMAX || d.TMAX.trim() === "");
+  console.log("Number of data points missing TMAX:", missingTmax.length);
+  console.log("Percentage missing TMAX:", ((missingTmax.length / weather.length) * 100).toFixed(2) + "%");
+
+  const missingAwnd = weather.filter(d => !d.AWND || d.AWND.trim() === "");
+  console.log("Number of data points missing AWND:", missingAwnd.length);
+  console.log("Percentage missing AWND:", ((missingAwnd.length / weather.length) * 100).toFixed(2) + "%");
+
+  const missingWsf5 = weather.filter(d => !d.WSF5 || d.WSF5.trim() === "");
+  console.log("Number of data points missing WSF5:", missingWsf5.length);
+  console.log("Percentage missing WSF5:", ((missingWsf5.length / weather.length) * 100).toFixed(2) + "%");
+
+  const missingWdf5 = weather.filter(d => !d.WDF5 || d.WDF5.trim() === "");
+  console.log("Number of data points missing WDF5:", missingWdf5.length);
+  console.log("Percentage missing WDF5:", ((missingWdf5.length / weather.length) * 100).toFixed(2) + "%");
+
+  const missingPrcp = weather.filter(d => !d.PRCP || d.PRCP.trim() === "");
+  console.log("Number of data points missing PRCP:", missingPrcp.length);
+  console.log("Percentage missing PRCP:", ((missingPrcp.length / weather.length) * 100).toFixed(2) + "%");
+
+  const missingSnow = weather.filter(d => !d.SNOW || d.SNOW.trim() === "");
+  console.log("Number of data points missing SNOW:", missingSnow.length);
+  console.log("Percentage missing SNOW:", ((missingSnow.length / weather.length) * 100).toFixed(2) + "%");
+
+  const missingSnwd = weather.filter(d => !d.SNWD || d.SNWD.trim() === "");
+  console.log("Number of data points missing SNWD:", missingSnwd.length);
+  console.log("Percentage missing SNWD:", ((missingSnwd.length / weather.length) * 100).toFixed(2) + "%");
+
   // https://d3js.org/d3-geo/path
   const path = d3.geoPath(); // path generator that will convert GeoJSON to SVG paths
   const projection = d3.geoAlbersUsa().scale(1300).translate([487.5, 305]);
@@ -230,7 +266,7 @@ async function fetchData() {
   
     // Filter the weather data for the dates within the 5-day window
     const filteredWeather = validWeather.filter(d => dateWindow.includes(d.formattedDate));
-    
+
     // Use the mapping here: group data by full state name
     const stateAggregates = d3.rollup(
       filteredWeather,
