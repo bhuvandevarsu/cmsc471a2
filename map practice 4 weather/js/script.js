@@ -255,6 +255,35 @@ async function fetchData() {
     console.log(+this.value)
   });
 
+  function move() {
+		let updated = +d3.select("#daySlider").attr("value");
+		updated += 1;
+		updated = updated % uniqueDates.length;
+		d3.select("#daySlider").attr("value", updated);
+		console.log("NEW UPDATED VALUE: ", d3.select("#daySlider").attr("value"));
+		updatePoints(+d3.select("#daySlider").attr("value"));
+	}
+	let interval = d3.interval(move, 250);
+	document.querySelector("#pause").addEventListener("click", pause);
+	document.querySelector("#resume").addEventListener("click", resume);
+	document.querySelector("#speedup").addEventListener("click", speedup);
+	document.querySelector("#slowdown").addEventListener("click", slowdown);
+	function pause() {
+		interval.stop();
+	}
+	function resume() {
+		interval = d3.interval(move, 250);
+	}
+	function speedup() {
+		interval.stop();
+		interval = d3.interval(move, 125);
+	}
+
+	function slowdown() {
+		interval.stop();
+		interval = d3.interval(move, 500);
+	}
+
   updatePoints(minDateIndex);
 
   function updateStateColors(selectedDate) {

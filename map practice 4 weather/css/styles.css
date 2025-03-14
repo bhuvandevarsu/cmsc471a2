@@ -78,3 +78,85 @@ ul li {
 .county-boundary:hover, .state:hover {
     fill: orange;
 }
+
+h1 {
+    margin-left: 110px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+}
+
+#slider-container {
+    display: block;
+    padding-left: 225px;
+    margin: 20px;    
+}
+
+label {
+    font-size: 20px;
+}
+
+span {
+    font-size: 20px;
+}
+
+ .rotatedRight {
+    background-color: blue;
+
+}
+.rotatedLeft {
+    background-color: blue;  
+} 
+
+#pause {
+    background-color: red;
+}
+
+#resume {
+    background-color: green;
+}
+
+#control-pannel {
+    padding-left: 100px;
+}
+
+button {
+    display: inline-block;
+    margin: 50px;
+    font-size: 40px;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+}
+
+#main-container {
+    border: solid;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+h2 {
+    padding-left: 300px;
+    padding-bottom: 20px
+}
+
+#tempGradient {
+    margin: 10px;
+}
+
+#windGradient {
+    margin: 10px;
+}
+
+#precipGradient {
+    margin: 10px;
+}
+
+#snowGradient {
+    margin: 10px;
+}
+
+#gradients-container {
+    border: solid;
+}
