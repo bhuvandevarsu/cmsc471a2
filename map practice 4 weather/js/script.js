@@ -3,70 +3,73 @@ console.log("D3 version:", d3.version);
 const width = 975;
 const height = 610;
 
+//https://d3-graph-gallery.com/graph/line_basic.html
+// set the dimensions and margins of the graph
+const margin = {top: 10, right: 30, bottom: 30, left: 60}
 const options = ['TMIN','TMAX','TAVG','AWND','WDF5','WSF5','SNOW','SNWD','PRCP'];
-let currVar = options[0]; // Declare currVar here
+var currVar = options[2]; // Declare currVar here
 let active = d3.select(null);
+
+
+// Define a mapping from state abbreviations to full state names
+const stateAbbrevToName = {
+  "AL": "Alabama",
+  "AK": "Alaska",
+  "AZ": "Arizona",
+  "AR": "Arkansas",
+  "CA": "California",
+  "CO": "Colorado",
+  "CT": "Connecticut",
+  "DE": "Delaware",
+  "FL": "Florida",
+  "GA": "Georgia",
+  "HI": "Hawaii",
+  "ID": "Idaho",
+  "IL": "Illinois",
+  "IN": "Indiana",
+  "IA": "Iowa",
+  "KS": "Kansas",
+  "KY": "Kentucky",
+  "LA": "Louisiana",
+  "ME": "Maine",
+  "MD": "Maryland",
+  "MA": "Massachusetts",
+  "MI": "Michigan",
+  "MN": "Minnesota",
+  "MS": "Mississippi",
+  "MO": "Missouri",
+  "MT": "Montana",
+  "NE": "Nebraska",
+  "NV": "Nevada",
+  "NH": "New Hampshire",
+  "NJ": "New Jersey",
+  "NM": "New Mexico",
+  "NY": "New York",
+  "NC": "North Carolina",
+  "ND": "North Dakota",
+  "OH": "Ohio",
+  "OK": "Oklahoma",
+  "OR": "Oregon",
+  "PA": "Pennsylvania",
+  "RI": "Rhode Island",
+  "SC": "South Carolina",
+  "SD": "South Dakota",
+  "TN": "Tennessee",
+  "TX": "Texas",
+  "UT": "Utah",
+  "VT": "Vermont",
+  "VA": "Virginia",
+  "WA": "Washington",
+  "WV": "West Virginia",
+  "WI": "Wisconsin",
+  "WY": "Wyoming"
+};
 
 // https://observablehq.com/@jeantimex/how-to-draw-a-us-map
 // https://observablehq.com/@d3/u-s-state-capitals
 // trying to use some of the tutorials online, youtube videos, + some of the observable graph galleries
 // (altho those are a little harder to use bc of the obsserable notebook does things a bit differnently)
-
 async function fetchData() {
-
-  // Define a mapping from state abbreviations to full state names
-  const stateAbbrevToName = {
-    "AL": "Alabama",
-    "AK": "Alaska",
-    "AZ": "Arizona",
-    "AR": "Arkansas",
-    "CA": "California",
-    "CO": "Colorado",
-    "CT": "Connecticut",
-    "DE": "Delaware",
-    "FL": "Florida",
-    "GA": "Georgia",
-    "HI": "Hawaii",
-    "ID": "Idaho",
-    "IL": "Illinois",
-    "IN": "Indiana",
-    "IA": "Iowa",
-    "KS": "Kansas",
-    "KY": "Kentucky",
-    "LA": "Louisiana",
-    "ME": "Maine",
-    "MD": "Maryland",
-    "MA": "Massachusetts",
-    "MI": "Michigan",
-    "MN": "Minnesota",
-    "MS": "Mississippi",
-    "MO": "Missouri",
-    "MT": "Montana",
-    "NE": "Nebraska",
-    "NV": "Nevada",
-    "NH": "New Hampshire",
-    "NJ": "New Jersey",
-    "NM": "New Mexico",
-    "NY": "New York",
-    "NC": "North Carolina",
-    "ND": "North Dakota",
-    "OH": "Ohio",
-    "OK": "Oklahoma",
-    "OR": "Oregon",
-    "PA": "Pennsylvania",
-    "RI": "Rhode Island",
-    "SC": "South Carolina",
-    "SD": "South Dakota",
-    "TN": "Tennessee",
-    "TX": "Texas",
-    "UT": "Utah",
-    "VT": "Vermont",
-    "VA": "Virginia",
-    "WA": "Washington",
-    "WV": "West Virginia",
-    "WI": "Wisconsin",
-    "WY": "Wyoming"
-  };
 
   // load from JSON file (the states)
   // https://d3js.org/d3-geo/conic#geoAlbersUsa
@@ -128,7 +131,7 @@ async function fetchData() {
   const svg = d3.select('svg')
     .on('click', reset);
     
-  const g = svg.append('g')
+  const g = svg.append('g');
 
   // some code for zoom into counties map taken from
   // https://gist.github.com/ElefHead/ebff082d41ef8b9658059c408096f782
@@ -162,7 +165,7 @@ async function fetchData() {
     .attr("id", "state-borders")
     .attr("d", path);
   
-  // filter out invalid data points
+  // filter out invalid data points (that don't have a valid longitude/latitude projection)
   const validWeather = weather.filter(d => projection([d.longitude, d.latitude]));
   console.log('Number of valid weather points for entire data set', validWeather.length);
 
@@ -181,6 +184,37 @@ async function fetchData() {
   d3.select('#daySlider').attr('min', minDateIndex).attr('max', maxDateIndex).attr('value', minDateIndex);
   d3.select('#dayDisplay').text(uniqueDates[minDateIndex]);
 
+  // Calculate extents to help generate color scales
+  const tempExtent = d3.extent(Array.from(validWeather.filter(d => d.TAVG != ""), d => d.TAVG));
+  const windExtent = d3.extent(Array.from(validWeather.filter(d => d.AWND != ""), d => d.AWND));
+  const precipExtent = d3.extent(Array.from(validWeather.filter(d => d.PRCP != ""), d => d.PRCP));
+  const snowExtent = d3.extent(Array.from(validWeather.filter(d => d.SNOW != ""), d => d.SNOW));
+  const depthExtent = d3.extent(Array.from(validWeather.filter(d => d.SNWD != ""), d => d.SNWD));
+
+  console.log(tempExtent)
+  console.log('snowExtent', snowExtent)
+  
+  // Define color scales (adjusted domains for visual clarity)
+  const tempColorScale = d3.scaleSequential(d3.interpolateRdBu) 
+    .domain([tempExtent[1],tempExtent[0]]) 
+    .clamp(true);
+  
+  const windColorScale = d3.scaleSequential(d3.interpolateGreens)
+    .domain([windExtent[0],windExtent[1]*.33])
+    .clamp(true);
+
+  const precipColorScale = d3.scaleSequential(d3.interpolatePurples)
+    .domain([precipExtent[0],precipExtent[1]*.15])
+    .clamp(true);
+
+  const snowColorScale = d3.scaleSequential(d3.interpolateBlues)
+    .domain([snowExtent[0],snowExtent[1]*.15])
+    .clamp(true);
+
+  const depthColorScale = d3.scaleSequential(d3.interpolateGreys)
+    .domain([depthExtent[0],depthExtent[1]*.6])
+    .clamp(true);
+
   function updatePoints(dateIndex) {
     let selectedDate = uniqueDates[dateIndex];
     const filteredWeather = validWeather.filter(d => d.formattedDate === selectedDate);
@@ -195,17 +229,18 @@ async function fetchData() {
           .attr('cx', d => projection([+d.longitude, +d.latitude])[0])
           .attr('cy', d => projection([+d.longitude, +d.latitude])[1])
           .attr('r', 2)
-          .attr('fill', 'red')
+          .attr('fill', d => tempColorScale((+d.TMAX + +d.TMIN) / 2))
           .on('mouseover', function (event, d) {
             console.log(d) // See the data point in the console for debugging
             d3.select('#tooltip')
-                // if you change opacity to hide it, you should also change opacity here
                 .style("display", 'block') // Make the tooltip visible
                 .html( // Change the html content of the <div> directly
                 `<strong>${d.station}</strong><br/>
                 state: ${d.state} <br/>
                 date: ${d.date} <br/>
                 average temperature: ${d.TAVG} <br/>
+                min temp: ${d.TMIN} <br/> 
+                max temp: ${d.TMAX} <br/>
                 average wind speed: ${d.AWND} <br/>
                 average precipitation: ${d.PRCP} <br/>
                 average snowfall: ${d.SNOW} <br/>`)
@@ -229,14 +264,18 @@ async function fetchData() {
             .attr('cx', d => projection([+d.longitude, +d.latitude])[0])
             .attr('cy', d => projection([+d.longitude, +d.latitude])[1])  
             .attr('fill', d => {
-              if (currVar == 'TMIN') {
-                 return d3.interpolateReds(d.TMIN/100)
-              } else if (currVar == 'TMAX') {
-                return d3.interpolateBlues(d.TMAX/100)
-              } else if (currVar == 'TAVG') {
-                return d3.interpolateGreens(d.TAVG/100)
+              if (currVar == 'SNWD') {
+                 return depthColorScale(d.SNWD)
+              } else if (currVar == 'AWND') {
+                  return windColorScale(d.AWND)
+              } else if (currVar == 'PRCP') {
+                  return precipColorScale(d.PRCP)
+              } else if (currVar == 'SNOW') {
+                  return snowColorScale(d.SNOW)
+              } else {
+                return tempColorScale((+d.TMAX + +d.TMIN) / 2) //USING INSTEAD OF AVG, SINCE LOTS OF NULL VALUES FOR AVG (33%) vs (.3%) for min/max
               }
-            }) // color based on the data
+            }) 
         }, 
         function(exit){
           return exit.remove();
@@ -249,7 +288,37 @@ async function fetchData() {
 
   d3.select('#daySlider').on('input', function () {
     updatePoints(+this.value);
+    console.log(+this.value)
   });
+
+  function move() {
+		let updated = +d3.select("#daySlider").attr("value");
+		updated += 1;
+		updated = updated % uniqueDates.length;
+		d3.select("#daySlider").attr("value", updated);
+		console.log("NEW UPDATED VALUE: ", d3.select("#daySlider").attr("value"));
+		updatePoints(+d3.select("#daySlider").attr("value"));
+	}
+	let interval = d3.interval(move, 250);
+	document.querySelector("#pause").addEventListener("click", pause);
+	document.querySelector("#resume").addEventListener("click", resume);
+	document.querySelector("#speedup").addEventListener("click", speedup);
+	document.querySelector("#slowdown").addEventListener("click", slowdown);
+	function pause() {
+		interval.stop();
+	}
+	function resume() {
+		interval = d3.interval(move, 250);
+	}
+	function speedup() {
+		interval.stop();
+		interval = d3.interval(move, 125);
+	}
+
+	function slowdown() {
+		interval.stop();
+		interval = d3.interval(move, 500);
+	}
 
   updatePoints(minDateIndex);
 
@@ -266,72 +335,74 @@ async function fetchData() {
   
     // Filter the weather data for the dates within the 5-day window
     const filteredWeather = validWeather.filter(d => dateWindow.includes(d.formattedDate));
+  
+    // Filter snow for null values, and get state aggregates for snow
+    const snowAggregates = d3.rollup(
+      filteredWeather.filter(d => d.SNOW != ""),
+      v => ({
+        avgSnow: d3.mean(v,d => +d.SNOW)
+      }),
+      d => stateAbbrevToName[d.state] // Convert abbreviation to full name
+    )    
 
-    // Use the mapping here: group data by full state name
+    // Filter snow depth for null values, and get state aggregates for snow depth
+    const depthAggregates = d3.rollup(
+      filteredWeather.filter(d => d.SNWD != ""),
+      v => ({
+        avgDepth: d3.mean(v,d => +d.SNWD)
+      }),
+      d => stateAbbrevToName[d.state] // Convert abbreviation to full name
+    )    
+
+    // Slice off the last entry if it's undefined
+    snowAggregates.delete(undefined);
+    depthAggregates.delete(undefined);
+
+    // Get the rest (Temp, Wind, Precip)
     const stateAggregates = d3.rollup(
       filteredWeather,
       v => ({
-        avgTemp: d3.mean(v, d => +d.TAVG),
+        avgTemp: d3.mean(v, d => 
+          {
+          if (+d.TAVG != 0){
+            return +d.TAVG
+          } else {
+            return (+d.TMAX + +d.TMIN)/2
+          }
+          }),
         avgWind: d3.mean(v, d => +d.AWND),
-        avgPrecip: d3.mean(v, d => +d.PRCP),
-        avgSnow: d3.mean(v, d => +d.SNOW)
+        avgPrecip: d3.mean(v, d => +d.PRCP)
       }),
       d => stateAbbrevToName[d.state] // Convert abbreviation to full name
     );
-  
-    // Calculate extents
-    const tempExtent = d3.extent(Array.from(stateAggregates.values(), d => d.avgTemp));
-    const windExtent = d3.extent(Array.from(stateAggregates.values(), d => d.avgWind));
-    const precipExtent = d3.extent(Array.from(stateAggregates.values(), d => d.avgPrecip));
-    const snowExtent = d3.extent(Array.from(stateAggregates.values(), d => d.avgSnow));
-  
-    // Define color scales
-    const tempColorScale = d3.scaleLinear()
-        .domain(tempExtent)
-        .range(["#ffcccc", "#990000"]); // light red to dark red
     
-    const windColorScale = d3.scaleLinear()
-        .domain(windExtent)
-        .range(["#cce5ff", "#003366"]); // light blue to dark blue
-
-    const precipColorScale = d3.scaleLinear()
-        .domain(precipExtent)
-        .range(["#ffffe0", "#ffd700"]); // light yellow to dark yellow
-    
-    const snowColorScale = d3.scaleLinear()
-        .domain(snowExtent)
-        .range(["#e6ffe6", "#006600"]); // light green to dark green
-  
-    // Check which gradient is active
-    const tempChecked = d3.select("#tempGradient").property("checked");
-    const windChecked = d3.select("#windGradient").property("checked");
-    const precipChecked = d3.select("#precipGradient").property("checked");
-    const snowChecked = d3.select("#snowGradient").property("checked");
-  
     // Update the fill for each state
     states_g.attr("fill", d => {
       const agg = stateAggregates.get(d.properties.name);
       if (!agg) return "lightgrey"; // fallback if no data exists for a state
-      if (tempChecked) {
+      if (currVar=='TAVG') {
          return tempColorScale(agg.avgTemp);
-      } else if (windChecked) {
+      } else if (currVar=='AWND') {
          return windColorScale(agg.avgWind);
-      } else if (precipChecked) {
+      } else if (currVar=='PRCP') {
          return precipColorScale(agg.avgPrecip);
-      } else if (snowChecked) {
-         return snowColorScale(agg.avgSnow);
+      } else if (currVar=='SNOW') {
+          return snowColorScale(snowAggregates.get(d.properties.name).avgSnow);
+      } else if (currVar=='SNWD'){
+        return depthColorScale(depthAggregates.get(d.properties.name).avgDepth)
       } else {
          return "lightgrey"; // default color if no box is selected
       }
     });
   }
 
+  // Zoom function helper (resetting back to national level view)
   // https://observablehq.com/@d3/zoom-to-bounding-box
   function reset() {
     active.classed("active", false);
     active = d3.select(null);
     
-    console.log('resetting')
+    console.log('resetting zoom to national view')
     states_g.transition().style("fill", null);
     svg.transition().duration(750).call(
       zoom.transform,
@@ -340,7 +411,7 @@ async function fetchData() {
     );
   }
 
-  // add an event handler that gets called when a state is clicked (turns the state red, zooms in
+  // add an event handler that gets called when a state is clicked
   function clicked(event, d) {
     
     if (d3.select('.background').node() === this) return reset();
@@ -377,54 +448,68 @@ async function fetchData() {
   d3.select('svg')
     .call(zoom);
 
-  d3.select('#dropdown')
-    .selectAll('option')
-    .data(options)
-    .enter()
-    .append('option')
-    .attr('value', d => d)
-    .text(d => d)
-  
-  d3.select('#dropdown')
-    .on("change", function (event) {
-      console.log(d3.select(this).property("value"));
-      currVar = d3.select(this).property("value");
-  
-      //call Update function
-      updatePoints(+d3.select('#daySlider').property('value'));
-    });
 
   d3.select("#tempGradient").on("change", function() { 
     if (this.checked) { 
       d3.select("#windGradient").property("checked", false);
       d3.select("#precipGradient").property("checked", false);
-      d3.select("#snowGradient").property("checked", false); }
-    
-    updateStateColors(d3.select('#dayDisplay').text()); });
+      d3.select("#snowGradient").property("checked", false);
+      d3.select("#depthGradient").property("checked", false); 
+      currVar = 'TAVG';
+      updateStateColors(d3.select('#dayDisplay').text());
+      updatePoints(+document.getElementById("daySlider").value) 
+    }
+  });
     
   d3.select("#windGradient").on("change", function() { 
+    console.log('wind gradient change')
     if (this.checked) { 
+      console.log('wind gradient checked')
       d3.select("#tempGradient").property("checked", false);
       d3.select("#precipGradient").property("checked", false);
-      d3.select("#snowGradient").property("checked", false); }
-      
-    updateStateColors(d3.select('#dayDisplay').text()); });
+      d3.select("#snowGradient").property("checked", false); 
+      d3.select("#depthGradient").property("checked", false); 
+      currVar = 'AWND';
+      updateStateColors(d3.select('#dayDisplay').text());
+      updatePoints(+document.getElementById("daySlider").value); 
+    }
+  });
     
   d3.select("#precipGradient").on("change", function() { 
     if (this.checked) { 
       d3.select("#tempGradient").property("checked", false);
       d3.select("#windGradient").property("checked", false);
-      d3.select("#snowGradient").property("checked", false); } 
-      
-    updateStateColors(d3.select('#dayDisplay').text()); });
+      d3.select("#snowGradient").property("checked", false); 
+      d3.select("#depthGradient").property("checked", false); 
+      currVar = 'PRCP';
+      updateStateColors(d3.select('#dayDisplay').text());
+      updatePoints(+document.getElementById("daySlider").value); 
+    }
+  });
     
   d3.select("#snowGradient").on("change", function() { 
     if (this.checked) { 
       d3.select("#tempGradient").property("checked", false);
       d3.select("#windGradient").property("checked", false);
-      d3.select("#precipGradient").property("checked", false); } 
-      
-    updateStateColors(d3.select('#dayDisplay').text()); });
+      d3.select("#precipGradient").property("checked", false); 
+      d3.select("#depthGradient").property("checked", false); 
+      currVar = 'SNOW';
+      updateStateColors(d3.select('#dayDisplay').text());
+      updatePoints(+document.getElementById("daySlider").value); 
+    } 
+   });
+
+    d3.select("#depthGradient").on("change", function() { 
+      if (this.checked) { 
+        d3.select("#tempGradient").property("checked", false);
+        d3.select("#windGradient").property("checked", false);
+        d3.select("#precipGradient").property("checked", false); 
+        d3.select('#snowGradient').property("checked",false);
+        currVar = 'SNWD';
+        updateStateColors(d3.select('#dayDisplay').text());
+        updatePoints(+document.getElementById("daySlider").value); 
+      }
+    });
 }
 
 fetchData();
