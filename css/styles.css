@@ -79,10 +79,10 @@ ul li {
     fill: orange;
 }
 
-h1 {
-    margin-left: 110px;
-    padding-top: 50px;
-    padding-bottom: 50px;
+#subtitle {
+    margin-left: 155px;
+    padding-top: 70px;
+    padding-bottom: 20px;
 }
 
 #slider-container {
@@ -136,7 +136,7 @@ button {
     margin-bottom: 30px;
 }
 
-h2 {
+#gradients {
     padding-left: 300px;
     padding-bottom: 20px
 }
@@ -159,4 +159,39 @@ h2 {
 
 #gradients-container {
     border: solid;
+}
+
+#heading {
+    margin-left: 145px;
+    padding-top: 20px;
+}
+
+#people {
+    padding-top: 5px;
+    margin-left: 20px;
+}
+
+#opening-para {
+    padding-bottom: 20px;
+}
+
+#introduction {
+    padding-left: 300px;
+    padding-top: 30px;
+    padding-bottom: 20px;
+}
+
+#second-section {
+    padding-left: 270px;
+    padding-bottom: 20px;
+}
+
+#third-para {
+    padding-left: 300px;
+    padding-bottom: 20px;
+}
+
+#final-para {
+    padding-left: 250px;
+    padding-bottom: 20px;
 }

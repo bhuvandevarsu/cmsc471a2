@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>map practice d3.js</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+</head>
+<body>
+    <h1 id="heading">CMSC 471 Assignment #2</h1>
+    <h1 id="people">Josh Lu, Bhuvan Devarsu, Johann Paul</h1>
+    <h2 id="subtitle"> Weather Map of the USA (2017)</h2>
+    <h3 id="introduction">Introduction</h3>
+    <p id="opening-para">Below is our visualization of the NOAA Daily Global Historical Climatology Network’s “Daily Weather in The U.S., 2017” dataset. It shows over 400,000 data points collected from 1589 stations across the United States. We chose to visualize five categories: Temperature, Average Daily Wind Speed, Precipitation, Snowfall, and Snow Depth.
+    Feel free to click and drag the map around, you can pause, play, or change the speed of the animation, or hover over a data point. 
+        </p>
+    <div id = "gradients-container"><h2 id="gradients">Gradients</h2>
+        <p id="state-gradients">
+            <label> <input type="checkbox" id="tempGradient" checked = "checked"> Average Temperature </label>
+            <label> <input type="checkbox" id="windGradient"> Average Daily Wind Speed </label>
+            <label> <input type="checkbox" id="precipGradient"> Precipitation </label>
+            <label> <input type="checkbox" id="snowGradient"> Snowfall </label>
+        </p>
+    </div>
+  
+    <div id="vis">
+        <svg viewBox="0 0 975 610"></svg>
+    </div>
+    <div id="main-container">
+        <p id="slider-container">
+        <label for="daySlider">Date:</label>
+        <input type="range" id="daySlider" min="0" max="100" step="1" value="0">
+        <span id="dayDisplay">Loading...</span>
+        </p>
+        <p id = "control-pannel">
+            <button id="resume">Resume</button>
+            <button id="pause">Pause</button>
+            <button id="speedup" class = "rotatedRight">Increase Speed</button>
+            <button id="slowdown" class = "rotatedLeft">Decrease Speed</button>
+        </p>
+    </div>
+    <h3 id="second-section">Design Decisions</h3>
+   <p>Given a data set of weather incidents across the U.S., we thought the most intuitive and quickly effective choice was to visualize on a map. The main visual encoding used is color. While color gradients aren’t the most perfectly expressive form of encoding for knowing the exact number of a given data point, it is a highly effective choice for quickly and easily understanding trends of weather for a given area. For weather data, knowing the exact number is less important than understanding trends, and we decided to map both our individual points, as well as our state averages, on various color gradients. </p>
+   <p>For temperature, we initially had a sequential gradient using just red hues, but switched to a diverging scale of red-blue, which feels more familiar (blue commonly associated with cold, red with hot). The other variables were given sequential gradients of various shades that were either different enough to be distinctive, or sort of matched the data. </p>
+   <p>In addition to graphing the individual points, we also decided to make aggregated gradients for each state, to help clearly express the statewide level weather patterns. The included data variables are: PRCP (precipitation in inches), SNOW (snowfall in inches), SNWD (snow depth in inches), AWND (average daily wind speed in miles/hour), and Temperature, for which we incorporated all three of TMAX (maximum temperature in Fahrenheit), TMIN (minimum temperature in Fahrenheit), TAVG (average temperature in Fahrenheit).</p>
+   <p>The dataset had a significant amount of missing data for certain variables, which we had to be careful how we wanted to handle. For TAVG, we had 157,899 null values, which was 37% of our data. However, almost all of them had a TMIN and TMAX. In those cases, we decided to still include the data point in calculating the average temperature, and just approximate using (TMAX + TMIN). This is imperfect for precise calculations, but not too far off, and we felt it was the better choice overall to include, given such points were 37% of our data, and that we are calculating state averages with a large sample size, and displaying as a color gradient, for which decimal point precision isn’t conveyed anyways.</p>
+   <p>For other alternative charts and data types — we also really wanted to implement different types of linked charts to help explore trends in the data, but we ran out of time to implement them. For example, we wanted to do a time-series chart below the map that displayed averages for the selected state or region over the time range selected, which would automatically change to reflect when a different state or region was selected on the map (or a different variable or time range was selected). I think it would’ve been highly effective, but we ran out of time. We also initially considered using the wind vector direction, and looked into potentially making an animation like the one displayed in week 5 of class <a href="https://www.esri.com/arcgis-blog/products/js-api-arcgis/mapping/create-an-animated-flow-visualization-with-the-arcgis-api-for-javascript/">wind animations</a> , but realized it would be difficult to implement given the available data set and tools (they used raster data and ARCGIS tools to make the implementation). And as shown in class, a map with just the static vectors on it for wind isn’t the most effective visualization, so we ended up not going down that route.</p>
+   <h3 id="third-para">References</h3>
+   <p>While learning to visualize with maps and properly project longitudes/latitudes to SVG, we drew from several examples and tutorials. Observable, the official D3 library, provides a graph gallery. Code for projection, as well as partial snippets of zoom to bounding box, the abstraction and zoom in to reveal the counties, were synthesized from observable tutorials, as well as one GitHub tutorial.
+    Used the Albers USA projections and paths, “counties-albers-10m.json”, to draw the map of the USA/state/county lines. GitHub repo for topojson us-atlas files at <a href="https://github.com/topojson/us-atlas ">topojson us-atlas</a>. Here is a list of some tutorials that we pulled/learned from: <ul><li><a href = "https://observablehq.com/@jeantimex/how-to-draw-a-us-map">Tutorial 1</a></li><li><a href="https://gist.github.com/ElefHead/ebff082d41ef8b9658059c408096f782 ">Tutorial 2</a></li><li><a href="https://observablehq.com/@d3/zoom-to-bounding-box ">Tutorial 3</a></li></ul>
+    </p>
+    <h3 id="final-para">Development Process</h3>
+    <p>Johann implemented color interpolation for data points, an autoplaying time slider with controls, and CSS styling. Bhuvan created a date-filtering slider, formatted dates, and applied dynamic color gradients based on selected data columns. Josh built the map with state and county paths, projected data points, implemented zoom and pan features, added tooltips, and refined color gradients for accuracy. Overall, the team collectively spent about 12-15 hours per person on the project, for a total of about 40 people hours, with the state average color gradients being the most time-intensive feature.</p>
+
+
+  
+    <div id="tooltip" style="display:none"></div> 
+    <!-- Load D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v1.min.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>
